@@ -19,7 +19,6 @@ def fetch_and_parse_url(url: str) -> dict:
         url = 'https://' + url
         
     html_content = ""
-    is_jina_fallback = False
     
     # 1. Try Direct HTTP Request
     try:
@@ -57,7 +56,18 @@ def parse_html_content(html_content: str, url: str = "") -> dict:
     """
     Parses raw HTML string and extracts accurate article components, word counts, headings, and images.
     """
-    soup = BeautifulSoup(html_content, 'html.parser')
+    if not html_content:
+        soup = BeautifulSoup("", 'html.parser')
+    else:
+        soup = BeautifulSoup(html_content, 'html.parser')
+    
+    # Extract Page Title upfront
+    page_title = soup.title.string.strip() if (soup.title and soup.title.string) else ""
+    
+    # Extract Meta Description upfront
+    meta_desc_tag = soup.find('meta', attrs={'name': re.compile(r'description', re.I)}) or \
+                    soup.find('meta', attrs={'property': re.compile(r'og:description', re.I)})
+    meta_description = meta_desc_tag.get('content', '').strip() if (meta_desc_tag and meta_desc_tag.get('content')) else ""
     
     # Parse URL slug for fallback keyword context
     url_slug_keywords = ""
@@ -130,9 +140,9 @@ def parse_html_content(html_content: str, url: str = "") -> dict:
             external_links += 1
 
     return {
-        'success': True,
+        'success': True if full_text else False,
         'url': url,
-        'title': page_title or url_slug_keywords,
+        'title': page_title or (url_slug_keywords or "Product Article"),
         'meta_description': meta_description,
         'url_slug_keywords': url_slug_keywords,
         'full_text': full_text,
@@ -155,7 +165,6 @@ def parse_jina_markdown(markdown_text: str, url: str = "") -> dict:
     """
     lines = markdown_text.split('\n')
     title = ""
-    meta_desc = ""
     headings = []
     text_lines = []
     image_count = markdown_text.count('![')
@@ -175,6 +184,9 @@ def parse_jina_markdown(markdown_text: str, url: str = "") -> dict:
     full_text = re.sub(r'\[.*?\]\(.*?\)', '', full_text) # Strip markdown links
     full_text = re.sub(r'\s+', ' ', full_text).strip()
     
+    words = re.findall(r'[\w\u0980-\u09FF]+', full_text)
+    word_count = len(words)
+    
     # Extract URL slug keywords for title fallback
     url_slug_keywords = ""
     if url:
@@ -190,7 +202,7 @@ def parse_jina_markdown(markdown_text: str, url: str = "") -> dict:
         title = url_slug_keywords or "Scraped Article"
 
     return {
-        'success': True,
+        'success': True if full_text else False,
         'url': url,
         'title': title or (url_slug_keywords or "Scraped Article"),
         'meta_description': text_lines[0] if text_lines else "",
