@@ -337,9 +337,9 @@ if analyze_btn or st.session_state.get('analyzed', False):
         
     # Main Tabs
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "🕵️ ১. কম্পিটিটর", 
+        "🕵️ ১. কম্পিটিটর কী করেছে", 
         "⚔️ ২. কন্টেন্ট গ্যাপ", 
-        "🏷️ ৩. মেটা সমাধান", 
+        "🏷️ ৩. আমাদের কী করা উচিত", 
         "🤖 ৪. AI স্ট্র্যাটেজি", 
         "📥 ৫. PDF রিপোর্ট"
     ])
@@ -348,7 +348,7 @@ if analyze_btn or st.session_state.get('analyzed', False):
     # TAB 1: COMPETITOR ARTICLE ANALYSIS
     # -------------------------------------------------------------
     with tab1:
-        st.markdown("### 📌 ১. কম্পিটিটর আর্টিকেল অ্যানালাইসিস ও কিওয়ার্ড")
+        st.markdown("### 📌 ১. কম্পিটিটর আর্টিকেলে কী কী করেছে (Focus Keyword, Sub-keywords & Outline)")
         
         # Metric Cards Row
         m1, m2, m3, m4 = st.columns(4)
@@ -499,7 +499,7 @@ if analyze_btn or st.session_state.get('analyzed', False):
     # TAB 3: SUGGESTED META & SOLUTIONS
     # -------------------------------------------------------------
     with tab3:
-        st.markdown("### 🏷️ ৩. প্রস্তাবিত মেটা টাইটেল, ডেসক্রিপশন ও সমাধান")
+        st.markdown("### 🎯 ৩. কম্পিটিটরকে টপকাতে আমাদের কী করা উচিত (Outrank Blueprint & Meta)")
         
         meta = comp_analysis.get('suggested_meta', {})
         
