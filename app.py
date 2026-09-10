@@ -1,18 +1,40 @@
 import sys
 import os
 
-# Ensure current directory is in sys.path for Streamlit Cloud & Linux deployment
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Bulletproof path setup for Streamlit Cloud / Linux
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+# Add modules directory to sys.path if it exists
+modules_path = os.path.join(BASE_DIR, 'modules')
+if os.path.exists(modules_path) and modules_path not in sys.path:
+    sys.path.insert(0, modules_path)
 
 import streamlit as st
 import pandas as pd
 import json
 
-from modules.scraper import fetch_and_parse_url, process_raw_text
-from modules.competitor_analyzer import analyze_competitor_article
-from modules.gap_analyzer import analyze_content_gap
-from modules.recommendation_engine import generate_outrank_recommendations
-from modules.report_generator import generate_html_report, generate_json_report, generate_pdf_bytes
+# Bulletproof multi-environment imports
+try:
+    from modules.scraper import fetch_and_parse_url, process_raw_text
+    from modules.competitor_analyzer import analyze_competitor_article
+    from modules.gap_analyzer import analyze_content_gap
+    from modules.recommendation_engine import generate_outrank_recommendations
+    from modules.report_generator import generate_html_report, generate_json_report, generate_pdf_bytes
+except ModuleNotFoundError:
+    try:
+        from Modules.scraper import fetch_and_parse_url, process_raw_text
+        from Modules.competitor_analyzer import analyze_competitor_article
+        from Modules.gap_analyzer import analyze_content_gap
+        from Modules.recommendation_engine import generate_outrank_recommendations
+        from Modules.report_generator import generate_html_report, generate_json_report, generate_pdf_bytes
+    except ModuleNotFoundError:
+        from scraper import fetch_and_parse_url, process_raw_text
+        from competitor_analyzer import analyze_competitor_article
+        from gap_analyzer import analyze_content_gap
+        from recommendation_engine import generate_outrank_recommendations
+        from report_generator import generate_html_report, generate_json_report, generate_pdf_bytes
 
 # Streamlit Page Config
 st.set_page_config(
