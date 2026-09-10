@@ -31,11 +31,11 @@ COMMON_BRANDS = [
     'Walton', 'Symphony', 'Techland', 'Startech', 'Ryans', 'Daraz', 'Bikroy', 'Custom Brand'
 ]
 
-def analyze_competitor_article(parsed_data: dict, api_key: str = "") -> dict:
+def analyze_competitor_article(parsed_data: dict, api_key: str = "", custom_focus_keyword: str = "") -> dict:
     """
     Analyzes competitor article and extracts Focus Keyword, Sub-keywords,
     Article Summary, Intent, Brand/Product Mentions, Meta recommendations, EEAT, and AEO/GEO strategies.
-    Supports optional Gemini API Key for deep AI semantic enrichment.
+    Supports optional Gemini API Key for deep AI semantic enrichment and optional custom user focus keyword input.
     """
     title = parsed_data.get('title', '')
     url_slug_kw = parsed_data.get('url_slug_keywords', '')
@@ -44,8 +44,11 @@ def analyze_competitor_article(parsed_data: dict, api_key: str = "") -> dict:
     headings = parsed_data.get('headings', [])
     h1_h2_text = " ".join([h['text'] for h in headings if h['tag'] in ['H1', 'H2']])
     
-    # 1. Extract Focus Keyword
-    focus_keyword = _extract_focus_keyword(title, h1_h2_text, full_text, url_slug_kw)
+    # 1. Extract or set Focus Keyword
+    if custom_focus_keyword and custom_focus_keyword.strip():
+        focus_keyword = custom_focus_keyword.strip().title()
+    else:
+        focus_keyword = _extract_focus_keyword(title, h1_h2_text, full_text, url_slug_kw)
     
     # 2. Extract Sub-Keywords (N-Grams & LSI Phrases)
     sub_keywords = _extract_sub_keywords(full_text, focus_keyword)
@@ -69,8 +72,9 @@ def analyze_competitor_article(parsed_data: dict, api_key: str = "") -> dict:
     ai_boost_results = None
     if api_key:
         ai_boost_results = _call_gemini_ai_analysis(full_text[:3000], focus_keyword, api_key)
-        if ai_boost_results and 'focus_keyword' in ai_boost_results:
-            focus_keyword = ai_boost_results['focus_keyword']
+        if ai_boost_results:
+            if 'focus_keyword' in ai_boost_results and not (custom_focus_keyword and custom_focus_keyword.strip()):
+                focus_keyword = ai_boost_results['focus_keyword']
             if 'suggested_title' in ai_boost_results:
                 suggested_meta['suggested_title'] = ai_boost_results['suggested_title']
             if 'suggested_meta_description' in ai_boost_results:

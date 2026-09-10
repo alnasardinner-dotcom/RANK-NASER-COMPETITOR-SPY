@@ -59,21 +59,21 @@ def parse_html_content(html_content: str, url: str = "") -> dict:
     """
     soup = BeautifulSoup(html_content, 'html.parser')
     
-    # Extract Title & Meta Description
-    title_tag = soup.find('title')
-    page_title = title_tag.get_text(strip=True) if title_tag else ""
-    
-    meta_desc_tag = soup.find('meta', attrs={'name': re.compile(r'description', re.I)}) or \
-                    soup.find('meta', attrs={'property': re.compile(r'og:description', re.I)})
-    meta_description = meta_desc_tag.get('content', '').strip() if meta_desc_tag else ""
-
     # Parse URL slug for fallback keyword context
     url_slug_keywords = ""
     if url:
         parsed_url = urllib.parse.urlparse(url)
         path_parts = [p for p in parsed_url.path.split('/') if p and not p.endswith(('.html', '.php', '.aspx'))]
-        if path_parts:
+        # Ignore generic path parts like gadget, category, shop, product
+        meaningful_parts = [p for p in path_parts if p.lower() not in ['gadget', 'category', 'shop', 'product', 'item', 'index']]
+        if meaningful_parts:
+            url_slug_keywords = meaningful_parts[-1].replace('-', ' ').replace('_', ' ').title()
+        elif path_parts:
             url_slug_keywords = path_parts[-1].replace('-', ' ').replace('_', ' ').title()
+
+    # Reject Cloudflare / Anti-bot Titles
+    if any(b in page_title.lower() for b in ['just a moment', 'cloudflare', 'captcha', 'attention required', 'checking your browser', 'access denied']):
+        page_title = url_slug_keywords or "Product Article"
 
     # Remove boilerplate & script elements
     for element in soup(['script', 'style', 'nav', 'footer', 'header', 'aside', 'form', 'iframe', 'noscript', 'svg']):
@@ -175,15 +175,26 @@ def parse_jina_markdown(markdown_text: str, url: str = "") -> dict:
     full_text = re.sub(r'\[.*?\]\(.*?\)', '', full_text) # Strip markdown links
     full_text = re.sub(r'\s+', ' ', full_text).strip()
     
-    words = re.findall(r'[\w\u0980-\u09FF]+', full_text)
-    word_count = len(words)
-    
+    # Extract URL slug keywords for title fallback
+    url_slug_keywords = ""
+    if url:
+        parsed_url = urllib.parse.urlparse(url)
+        path_parts = [p for p in parsed_url.path.split('/') if p and not p.endswith(('.html', '.php', '.aspx'))]
+        meaningful_parts = [p for p in path_parts if p.lower() not in ['gadget', 'category', 'shop', 'product', 'item', 'index']]
+        if meaningful_parts:
+            url_slug_keywords = meaningful_parts[-1].replace('-', ' ').replace('_', ' ').title()
+        elif path_parts:
+            url_slug_keywords = path_parts[-1].replace('-', ' ').replace('_', ' ').title()
+
+    if any(b in title.lower() for b in ['just a moment', 'cloudflare', 'captcha', 'attention required', 'checking your browser', 'access denied']):
+        title = url_slug_keywords or "Scraped Article"
+
     return {
         'success': True,
         'url': url,
-        'title': title or "Scraped Article",
+        'title': title or (url_slug_keywords or "Scraped Article"),
         'meta_description': text_lines[0] if text_lines else "",
-        'url_slug_keywords': "",
+        'url_slug_keywords': url_slug_keywords,
         'full_text': full_text,
         'headings': headings,
         'h1_headings': [h['text'] for h in headings if h['tag'] == 'H1'],

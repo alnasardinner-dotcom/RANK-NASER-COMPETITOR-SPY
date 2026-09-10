@@ -223,6 +223,14 @@ st.sidebar.markdown("## ⚙️ Input Settings")
 input_mode = st.sidebar.radio("Input Source Method:", ["🌐 URL Scraping Mode", "📝 Direct Text Paste Mode"])
 
 st.sidebar.markdown("---")
+st.sidebar.markdown("### 🎯 Main Focus Keyword (ফোকাস কিওয়ার্ড)")
+custom_fk_input = st.sidebar.text_input(
+    "Target Main Keyword (optional):", 
+    placeholder="e.g. Gimbal, Gaming Laptop",
+    help="এখানে আপনার টার্গেটেড Main Keyword দিন। ফাঁকা রাখলে AI অটোমেটিক আর্টিকেলের কন্টেন্ট ও URL থেকে সেরা কিওয়ার্ড খুঁজে নেবে।"
+)
+
+st.sidebar.markdown("---")
 st.sidebar.markdown("### 🕵️ 1. Competitor Article")
 
 if input_mode == "🌐 URL Scraping Mode":
@@ -313,7 +321,7 @@ if analyze_btn or st.session_state.get('analyzed', False):
             st.stop()
             
         # Analyze Competitor
-        comp_analysis = analyze_competitor_article(comp_parsed, api_key=api_key_input)
+        comp_analysis = analyze_competitor_article(comp_parsed, api_key=api_key_input, custom_focus_keyword=custom_fk_input)
         
         # Process User Data
         if input_mode == "🌐 URL Scraping Mode" and user_url:
