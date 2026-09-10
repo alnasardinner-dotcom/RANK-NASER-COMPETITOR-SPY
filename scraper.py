@@ -35,26 +35,23 @@ def fetch_and_parse_url(url: str) -> dict:
         except Exception:
             pass
 
-    # 2. Check if Direct Scraping returned anti-bot / empty / CAPTCHA page
-    if not html_content or len(html_content) < 500 or "Just a moment..." in html_content or "CAPTCHA" in html_content:
+    direct_parsed = parse_html_content(html_content, url=url)
+    
+    # 2. Check if Direct Scraping returned anti-bot, empty, or low word count (< 50 words)
+    if not direct_parsed.get('success') or direct_parsed.get('word_count', 0) < 50 or "Just a moment..." in html_content or "CAPTCHA" in html_content:
         # Fallback to Jina AI Reader API for live Markdown web fetching
         try:
             jina_url = f"https://r.jina.ai/{url}"
             jina_headers = {'User-Agent': 'Mozilla/5.0'}
             jina_res = requests.get(jina_url, headers=jina_headers, timeout=15)
-            if jina_res.status_code == 200 and len(jina_res.text) > 300:
-                return parse_jina_markdown(jina_res.text, url=url)
+            if jina_res.status_code == 200 and len(jina_res.text) > 200:
+                jina_parsed = parse_jina_markdown(jina_res.text, url=url)
+                if jina_parsed.get('word_count', 0) > direct_parsed.get('word_count', 0):
+                    return jina_parsed
         except Exception:
             pass
 
-    if not html_content:
-        return {
-            'success': False,
-            'error': f"Could not fetch URL: {url}. Please check the link or paste text directly.",
-            'url': url
-        }
-
-    return parse_html_content(html_content, url=url)
+    return direct_parsed
 
 def parse_html_content(html_content: str, url: str = "") -> dict:
     """

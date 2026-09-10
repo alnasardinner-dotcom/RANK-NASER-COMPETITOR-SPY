@@ -19,7 +19,10 @@ STOPWORDS = set([
     'we\'re', 'we\'ve', 'were', 'weren\'t', 'what', 'what\'s', 'when', 'when\'s', 'where', 'where\'s', 'which',
     'while', 'who', 'who\'s', 'whom', 'why', 'why\'s', 'with', 'won\'t', 'would', 'wouldn\'t', 'you', 'you\'d',
     'you\'ll', 'you\'re', 'you\'ve', 'your', 'yours', 'yourself', 'yourselves', 'best', 'top', 'review', 'guide',
-    'how', 'com', 'http', 'https', 'www', 'get', 'use', 'using', 'also', 'one', 'two', 'new', 'buy', 'price'
+    'how', 'com', 'http', 'https', 'www', 'get', 'use', 'using', 'also', 'one', 'two', 'new', 'buy', 'price',
+    'amp', 'gt', 'lt', 'quot', 'nbsp', 'looking', 'comprehensive', 'buying', 'overall', 'overview', 'bd',
+    'bangladesh', '2024', '2025', '2026', 'make', 'well', 'good', 'even', 'like', 'just', 'more', 'than',
+    'such', 'only', 'select', 'options', 'view', 'read', 'click', 'here', 'more', 'details'
 ])
 
 COMMON_BRANDS = [
@@ -96,24 +99,32 @@ def analyze_competitor_article(parsed_data: dict, api_key: str = "") -> dict:
 
 def _call_gemini_ai_analysis(article_text: str, current_fk: str, api_key: str) -> dict:
     """
-    Calls Gemini API REST Endpoint for deep AI semantic analysis.
+    Calls Google Gemini API for deep AI semantic analysis & Google AI Overview recommendations.
     """
-    try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-        prompt = (
-            f"Analyze this article text: '{article_text[:2000]}'.\n"
-            f"Return JSON format ONLY with keys: 'focus_keyword', 'suggested_title', 'suggested_meta_description'."
-        )
-        payload = {"contents": [{"parts": [{"text": prompt}]}]}
-        res = requests.post(url, json=payload, timeout=8)
-        if res.status_code == 200:
-            data = res.json()
-            raw_output = data['candidates'][0]['content']['parts'][0]['text']
-            json_match = re.search(r'\{.*\}', raw_output, re.DOTALL)
-            if json_match:
-                return json.loads(json_match.group(0))
-    except Exception:
-        pass
+    models = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"]
+    prompt = (
+        f"You are RankNaser AI SEO Intelligence. Analyze this competitor article:\n'{article_text[:2500]}'.\n"
+        f"Return valid JSON ONLY with keys:\n"
+        f"- 'focus_keyword': main focus keyword targeting\n"
+        f"- 'suggested_title': high CTR Meta Title in Bangla/English\n"
+        f"- 'suggested_meta_description': persuasive Meta Description under 160 chars\n"
+        f"- 'ai_overview_tip': 1 key actionable tip to rank in Google AI Overviews\n"
+    )
+    
+    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    
+    for model in models:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            res = requests.post(url, json=payload, timeout=8)
+            if res.status_code == 200:
+                data = res.json()
+                raw_output = data['candidates'][0]['content']['parts'][0]['text']
+                json_match = re.search(r'\{.*\}', raw_output, re.DOTALL)
+                if json_match:
+                    return json.loads(json_match.group(0))
+        except Exception:
+            continue
     return None
 
 def _generate_suggested_metadata(focus_keyword: str, brand_info: dict) -> dict:
@@ -259,7 +270,7 @@ def _extract_sub_keywords(full_text: str, focus_keyword: str, top_n: int = 15) -
 
 def _detect_brands_and_products(full_text: str, title: str) -> dict:
     """
-    Detects brand names, company names, and specific model/product highlights.
+    Detects brand names, company names, and specific model/product highlights strictly present in the article.
     """
     text_to_search = title + " " + full_text
     found_brands = set()
@@ -268,23 +279,34 @@ def _detect_brands_and_products(full_text: str, title: str) -> dict:
         if re.search(r'\b' + re.escape(brand) + r'\b', text_to_search, re.I):
             found_brands.add(brand)
             
-    # Regex search for model patterns like "iPhone 15 Pro", "Galaxy S24", "RTX 4090", "Redmi Note 13"
-    model_patterns = [
-        r'\b([A-Z][a-z0-9]+(?:\s+[A-Z0-9][a-z0-9\-]+){1,3})\b',
-        r'\b(Model|Series|Edition|Pro|Max|Ultra|Plus)\s+([A-Z0-9\-]+)\b'
+    # Product Model Keywords (RTX 4060, Galaxy S24, Legion 5, iPhone 15, Core i7, etc.)
+    product_keywords = [
+        r'\b(iPhone\s+[0-9]{1,2}(?:\s+(?:Pro|Max|Plus|Mini))?)\b',
+        r'\b(Galaxy\s+[S|A|M|Z][0-9]{1,2}(?:\s+(?:Ultra|Plus|FE))?)\b',
+        r'\b(RTX\s+[0-9]{4}(?:\s+Ti)?)\b',
+        r'\b(GTX\s+[0-9]{4}(?:\s+Ti)?)\b',
+        r'\b(Radeon\s+RX\s+[0-9]{4})\b',
+        r'\b(Core\s+i[3|5|7|9](?:\s+[0-9]{4,5}[A-Z]*)?)\b',
+        r'\b(Ryzen\s+[3|5|7|9](?:\s+[0-9]{4,5}[A-Z]*)?)\b',
+        r'\b(ROG\s+Strix(?:\s+[A-Z0-9]+)?)\b',
+        r'\b(Legion\s+[0-9]{1,2}(?:\s+Pro)?)\b',
+        r'\b(Victus\s+[0-9]{2})\b',
+        r'\b(Redmi\s+Note\s+[0-9]{1,2})\b',
+        r'\b(MacBook\s+(?:Air|Pro))\b',
+        r'\b(iPad\s+(?:Air|Pro|Mini)?)\b'
     ]
     
     products = set()
-    for pattern in model_patterns:
-        matches = re.findall(pattern, text_to_search)
-        for m in matches[:10]:
-            prod_str = " ".join(m) if isinstance(m, tuple) else m
-            if len(prod_str) > 4 and not any(w.lower() in STOPWORDS for w in prod_str.split()):
-                products.add(prod_str)
+    for pattern in product_keywords:
+        matches = re.findall(pattern, text_to_search, re.I)
+        for m in matches[:6]:
+            prod_str = m.strip() if isinstance(m, str) else " ".join(m).strip()
+            if len(prod_str) > 2:
+                products.add(prod_str.title())
                 
     return {
-        'brands': list(found_brands) if found_brands else ["Generic / Unspecified Brand"],
-        'products': list(products)[:8] if products else ["Primary Featured Product"]
+        'brands': list(found_brands) if found_brands else ["ব্র্যান্ডের নাম উল্লেখ নেই (Generic/Custom Brand)"],
+        'products': list(products)[:8] if products else [title.title()[:35]]
     }
 
 def _analyze_reader_intent(title: str, meta_desc: str, full_text: str, headings: list) -> dict:

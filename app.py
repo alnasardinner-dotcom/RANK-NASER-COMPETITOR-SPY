@@ -243,9 +243,12 @@ else:
     user_text_input = st.sidebar.text_area("Paste Your Article Text:", height=180, placeholder="Paste your website article text here...")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🤖 Optional AI API Boost Engine")
-api_key_input = st.sidebar.text_input("Gemini API Key (Optional):", type="password", placeholder="AIzaSy...")
-st.sidebar.caption("Leave blank to run on built-in NLP & Scraping core.")
+st.sidebar.markdown("### 🔑 Google AI (Gemini) API Integration")
+api_key_input = st.sidebar.text_input("Google Gemini API Key (Optional):", type="password", placeholder="AIzaSy...")
+if api_key_input:
+    st.sidebar.success("✨ Google Gemini AI Engine: Active")
+else:
+    st.sidebar.caption("💡 Leave blank to use built-in free Neural Engine.")
 
 # Sample Demo Data Loader Button
 if st.sidebar.button("⚡ Load Demo Sample Articles"):
